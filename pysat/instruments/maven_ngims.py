@@ -97,6 +97,7 @@ def load(fnames, tag=None, sat_id=None):
 
 
     """
+    import numpy as np
 
     data = pds.read_csv(fnames[0], index_col=0, parse_dates=True)
     for fname in fnames[1:]:
@@ -104,10 +105,12 @@ def load(fnames, tag=None, sat_id=None):
         data = data.append(new_data, sort=True)
 
     # TODO: sort data by mass
+    species = np.unique(data['species'])
+    index = dict()
+    for sp in species:
+        index[sp] = np.where(data['species']==sp)
 
     meta = pysat.Meta()
-
-    # TODO: add metadata from columns
 
     return data, meta
 
