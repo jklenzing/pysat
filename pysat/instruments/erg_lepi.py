@@ -50,6 +50,7 @@ tags = {'': 'omni flux data'}
 sat_ids = {'': ['']}
 test_dates = {'': {'': pysat.datetime(2017, 4, 1)}}
 
+remote_site = 'https://ergsc.isee.nagoya-u.ac.jp'
 fname = 'erg_lepi_l2_omniflux_{year:04d}{month:02d}{day:02d}_v03_00.cdf'
 supported_tags = {'': {'': fname}}
 # use the CDAWeb methods list files routine
@@ -62,18 +63,17 @@ list_files = functools.partial(cdw.list_files,
 # no other information needs to be supplied here
 # pysatCDF is used to load data
 load = cdw.load
-basic_tag = {'dir': 'data/ergsc/satellite/erg/lepi/l2/omniflux',
+basic_tag = {'dir': '/data/ergsc/satellite/erg/lepi/l2/omniflux/',
              'remote_fname': '{year:4d}/{month:2d}/' + fname,
              'local_fname': fname}
 supported_tags = {'': {'': basic_tag}}
 download = functools.partial(cdw.download, supported_tags,
-                             remote_site='https://ergsc.isee.nagoya-u.ac.jp')
+                             remote_site=remote_site)
 
 # support listing files currently on CDAWeb
-list_remote_files = \
-    functools.partial(cdw.list_remote_files,
-                      remote_site='https://ergsc.isee.nagoya-u.ac.jp',
-                      supported_tags=supported_tags)
+list_remote_files = functools.partial(cdw.list_remote_files,
+                                      remote_site=remote_site,
+                                      supported_tags=supported_tags)
 
 
 # code should be defined below as needed
