@@ -29,7 +29,7 @@ import pysat
 import functools
 
 
-from . import nasa_cdaweb_methods as cdw
+from .methods import nasa_cdaweb as cdw
 
 platform = 'maven'
 name = 'ngims'
