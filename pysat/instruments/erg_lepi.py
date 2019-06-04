@@ -50,7 +50,7 @@ tags = {'': 'omni flux data'}
 sat_ids = {'': ['']}
 test_dates = {'': {'': pysat.datetime(2017, 4, 1)}}
 
-fname = 'erg_lepi_l2_omniflux_{year:04d}{month:02d}{day:02d}_v02_00.cdf'
+fname = 'erg_lepi_l2_omniflux_{year:04d}{month:02d}{day:02d}_v03_00.cdf'
 supported_tags = {'': {'': fname}}
 # use the CDAWeb methods list files routine
 # the command below presets some of the methods inputs, leaving
