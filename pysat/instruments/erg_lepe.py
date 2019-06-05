@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Supports the LEPi instrument on the ERG (Arase) satellite.
+"""Supports the LEPe instrument on the ERG (Arase) satellite.
 
 Rules of the Road at
 https://ergsc.isee.nagoya-u.ac.jp/data_info/rules_of_the_road.shtml.en
