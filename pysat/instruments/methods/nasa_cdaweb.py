@@ -3,6 +3,10 @@
 pysat. Adding new CDAWeb datasets should only require mininal user
 intervention.
 
+Note that the https interface means that other sites can potentially use this
+code implementation.  These routines are also used for the ERG science data
+center at Nagoya.
+
 """
 
 from __future__ import absolute_import, division, print_function
