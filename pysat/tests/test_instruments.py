@@ -1,5 +1,5 @@
 """
-tests the pysat meta object and code
+tests the pysat instruments and code
 """
 from importlib import import_module
 from functools import partial
@@ -17,7 +17,7 @@ import pysat.instruments.pysat_testing
 exclude_list = ['champ_star', 'superdarn_grdex', 'cosmic_gps',
                 'cosmic2013_gps', 'demeter_iap', 'sport_ivm',
                 'icon_euv', 'icon_ivm', 'icon_mighti', 'icon_fuv',
-                'sw_dst', 'ucar_tiegcm']
+                'supermag_magnetometer', 'sw_dst', 'ucar_tiegcm']
 
 # exclude testing download functionality for specific module name, tag, sat_id
 exclude_tags = {'sw_f107': {'tag': ['prelim'], 'sat_id': ['']},
@@ -91,23 +91,22 @@ def init_func_external(self):
                 module.test_dates = info
             for sat_id in info.keys():
                 for tag in info[sat_id].keys():
-                    if name in exclude_tags:
-                        if tag in exclude_tags[name]['tag'] and \
-                                  sat_id in exclude_tags[name]['sat_id']:
-                            # drop out of for loop
-                            # we don't want to test download for this combo
-                            print(' '.join(['Excluding', name, tag, sat_id]))
-                            break
-                    try:
-                        inst = pysat.Instrument(inst_module=module,
-                                                tag=tag,
-                                                sat_id=sat_id,
-                                                temporary_file_list=True)
-                        inst.test_dates = module.test_dates
-                        self.instruments.append(inst)
-                        self.instrument_modules.append(module)
-                    except:
-                        pass
+                    if name in exclude_tags and \
+                            tag in exclude_tags[name]['tag'] and \
+                            sat_id in exclude_tags[name]['sat_id']:
+                        # we don't want to test download for this combo
+                        print(' '.join(['Excluding', name, tag, sat_id]))
+                    else:
+                        try:
+                            inst = pysat.Instrument(inst_module=module,
+                                                    tag=tag,
+                                                    sat_id=sat_id,
+                                                    temporary_file_list=True)
+                            inst.test_dates = module.test_dates
+                            self.instruments.append(inst)
+                            self.instrument_modules.append(module)
+                        except:
+                            pass
     pysat.utils.set_data_dir(saved_path, store=False)
 
 
@@ -248,7 +247,6 @@ class TestInstrumentQualifier():
         import os
 
         start = inst.test_dates[inst.sat_id][inst.tag]
-        # print (start)
         try:
             # check for username
             inst_name = '_'.join((inst.platform, inst.name))

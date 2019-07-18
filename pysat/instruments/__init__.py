@@ -7,7 +7,7 @@ is contained within a subpackage of this set.
 """
 
 __all__ = ['champ_star', 'cnofs_ivm', 'cnofs_plp', 'cnofs_vefi',
-           'cosmic2013_gps', 'cosmic_gps', 'demeter_iap', 'dmsp_ivm',
+           'cosmic_gps', 'demeter_iap', 'dmsp_ivm',
            'gold_day', 'gold_limb', 'gold_night', 'gold_occ',
            'icon_ivm', 'icon_euv', 'icon_fuv', 'icon_mighti',
            'iss_fpmu',  'jro_isr', 'maven_ngims', 'omni_hro',

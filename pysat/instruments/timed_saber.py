@@ -52,14 +52,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import functools
-import sys
-
-import numpy as np
-import pandas as pds
 
 import pysat
 # CDAWeb methods prewritten for pysat
-from . import nasa_cdaweb_methods as cdw
+from .methods import nasa_cdaweb as cdw
 
 # the platform and name strings associated with this instrument
 # need to be defined at the top level
@@ -99,7 +95,7 @@ test_dates = {'': {'': pysat.datetime(2019, 1, 1)}}
 # you can use format keywords year, month, day, hour, min, sec,
 # version and revision
 # see code docstring for latest
-fname = ''.join(('timed_l2av20_saber_{year:04d}{month:02d}{day:02d}',
+fname = ''.join(('timed_l2av207_saber_{year:04d}{month:02d}{day:02d}',
                  '????_v01.cdf'))
 supported_tags = {'': {'': fname}}
 # use the CDAWeb methods list files routine
@@ -134,7 +130,7 @@ load = cdw.load
 # a dictionary needs to be created for each sat_id and tag
 # combination along with the file format template
 # outer dict keyed by sat_id, inner dict keyed by tag
-basic_tag = {'dir': '/pub/data/timed/saber/version2_0/level2a_cdf',
+basic_tag = {'dir': '/pub/data/timed/saber/level2a_v2_07_cdf',
              'remote_fname': '{year:4d}/{month:02d}/' + fname,
              'local_fname': fname}
 supported_tags = {'': {'': basic_tag}}
