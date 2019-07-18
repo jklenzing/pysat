@@ -39,6 +39,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import functools
+import xarray as xr
 import pysat
 
 # CDAWeb methods prewritten for pysat
@@ -120,7 +121,7 @@ def default(self):
 
 
 def load(fnames, tag=None, sat_id=None):
-    """Loads GOLD nighttime_disk data using pysat into pandas.
+    """Loads GOLD night data using pysat into xarray.
 
     This routine is called as needed by pysat. It is not intended
     for direct user interaction.
