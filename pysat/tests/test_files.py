@@ -16,7 +16,7 @@ import pysat.instruments.pysat_testing
 if sys.version_info[0] >= 3:
     from importlib import reload as re_load
 else:
-    re_load = reload
+    re_load = reload  # noqa F821
 
 
 def create_dir(inst=None, temporary_file_list=False):
@@ -66,7 +66,7 @@ def create_files(inst, start, stop, freq=None, use_doy=True, root_fname=None):
                              day=doy, month=date.month, hour=date.hour,
                              minute=date.minute, second=date.second))
         with open(fname, 'w') as f:
-            pass
+            f.close()
 
 
 def list_files(tag=None, sat_id=None, data_path=None, format_str=None):
@@ -89,11 +89,9 @@ def list_files(tag=None, sat_id=None, data_path=None, format_str=None):
 
 class TestBasics():
 
-    def __init__(self, temporary_file_list=False):
-        self.temporary_file_list = temporary_file_list
-
     def setup(self):
         """Runs before every method to create a clean testing setup."""
+        self.temporary_file_list = False
         # store current pysat directory
         self.data_path = pysat.data_dir
 
@@ -344,11 +342,17 @@ class TestBasics():
 
 
 class TestBasicsNoFileListStorage(TestBasics):
-    def __init__(self, temporary_file_list=True):
-        self.temporary_file_list = temporary_file_list
+    def setup(self):
+        """Runs before every method to create a clean testing setup."""
+        self.temporary_file_list = True
+        # store current pysat directory
+        self.data_path = pysat.data_dir
 
+        # create temporary directory
+        dir_name = tempfile.mkdtemp()
+        pysat.utils.set_data_dir(dir_name, store=False)
 
-class TestInstrumentWithFiles():
+        self.testInst = \
 
     def __init__(self, temporary_file_list=False):
         self.temporary_file_list = temporary_file_list
