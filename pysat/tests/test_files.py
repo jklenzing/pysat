@@ -353,12 +353,27 @@ class TestBasicsNoFileListStorage(TestBasics):
         pysat.utils.set_data_dir(dir_name, store=False)
 
         self.testInst = \
+            pysat.Instrument(inst_module=pysat.instruments.pysat_testing,
+                             clean_level='clean',
+                             temporary_file_list=self.temporary_file_list)
+        # create testing directory
+        create_dir(self.testInst)
 
-    def __init__(self, temporary_file_list=False):
-        self.temporary_file_list = temporary_file_list
+    def teardown(self):
+        """Runs after every method to clean up previous testing."""
+        remove_files(self.testInst)
+        try:
+            pysat.utils.set_data_dir(self.data_path, store=False)
+        except:
+            pass
+        del self.testInst
+
+
+class TestInstrumentWithFiles():
 
     def setup(self):
         """Runs before every method to create a clean testing setup."""
+        self.temporary_file_list = False
         # store current pysat directory
         self.data_path = pysat.data_dir
         # create temporary directory
@@ -600,8 +615,56 @@ class TestBasicsNoFileListStorage(TestBasics):
 
 
 class TestInstrumentWithFilesNoFileListStorage(TestInstrumentWithFiles):
-    def __init__(self, temporary_file_list=True):
-        self.temporary_file_list = temporary_file_list
+    def setup(self):
+        """Runs before every method to create a clean testing setup."""
+        self.temporary_file_list = True
+        # store current pysat directory
+        self.data_path = pysat.data_dir
+        # create temporary directory
+        dir_name = tempfile.mkdtemp()
+        pysat.utils.set_data_dir(dir_name, store=False)
+        # create testing directory
+        create_dir(temporary_file_list=self.temporary_file_list)
+
+        # create a test instrument, make sure it is getting files from
+        # filesystem
+        re_load(pysat.instruments.pysat_testing)
+        pysat.instruments.pysat_testing.list_files = list_files
+        # create a bunch of files by year and doy
+        self.testInst = \
+            pysat.Instrument(inst_module=pysat.instruments.pysat_testing,
+                             clean_level='clean',
+                             temporary_file_list=self.temporary_file_list)
+
+        self.root_fname = ''.join(('pysat_testing_junk_{year:04d}_gold_',
+                                   '{day:03d}_stuff_{month:02d}_{hour:02d}_',
+                                   '{minute:02d}_{second:02d}.pysat_testing_',
+                                   'file'))
+        start = pysat.datetime(2007, 12, 31)
+        stop = pysat.datetime(2008, 1, 10)
+        create_files(self.testInst, start, stop, freq='100min',
+                     use_doy=False, root_fname=self.root_fname)
+
+        self.testInst = \
+            pysat.Instrument(inst_module=pysat.instruments.pysat_testing,
+                             clean_level='clean',
+                             update_files=True,
+                             temporary_file_list=self.temporary_file_list)
+
+    def teardown(self):
+        """Runs after every method to clean up previous testing."""
+        remove_files(self.testInst)
+        del self.testInst
+        re_load(pysat.instruments.pysat_testing)
+        re_load(pysat.instruments)
+        # make sure everything about instrument state is restored
+        # restore original file list, no files
+        pysat.Instrument(inst_module=pysat.instruments.pysat_testing,
+                         clean_level='clean',
+                         update_files=True,
+                         temporary_file_list=self.temporary_file_list)
+        pysat.utils.set_data_dir(self.data_path, store=False)
+
 
 
 # create year doy file set with multiple versions
@@ -642,7 +705,7 @@ def create_versioned_files(inst, start=None, stop=None, freq='1D',
                                                        version=version,
                                                        revision=revision))
                 with open(fname, 'w') as f:
-                    pass
+                    f.close()
 
 
 def list_versioned_files(tag=None, sat_id=None, data_path=None,
@@ -665,11 +728,10 @@ def list_versioned_files(tag=None, sat_id=None, data_path=None,
 
 
 class TestInstrumentWithVersionedFiles():
-    def __init__(self, temporary_file_list=False):
-        self.temporary_file_list = temporary_file_list
 
     def setup(self):
         """Runs before every method to create a clean testing setup."""
+        self.temporary_file_list = False
         # store current pysat directory
         self.data_path = pysat.data_dir
         # create temporary directory
@@ -922,5 +984,53 @@ class TestInstrumentWithVersionedFiles():
 
 
 class TestInstrumentWithVersionedFilesNoFileListStorage(TestInstrumentWithVersionedFiles):
-    def __init__(self, temporary_file_list=True):
-        self.temporary_file_list = temporary_file_list
+
+    def setup(self):
+        """Runs before every method to create a clean testing setup."""
+        self.temporary_file_list = True
+        # store current pysat directory
+        self.data_path = pysat.data_dir
+        # create temporary directory
+        dir_name = tempfile.gettempdir()
+        pysat.utils.set_data_dir(dir_name, store=False)
+        # create testing directory
+        create_dir(temporary_file_list=self.temporary_file_list)
+
+        # create a test instrument, make sure it is getting files from
+        # filesystem
+        re_load(pysat.instruments.pysat_testing)
+        pysat.instruments.pysat_testing.list_files = list_versioned_files
+        # create a bunch of files by year and doy
+        self.testInst = \
+            pysat.Instrument(inst_module=pysat.instruments.pysat_testing,
+                             clean_level='clean',
+                             temporary_file_list=self.temporary_file_list)
+
+        self.root_fname = ''.join(('pysat_testing_junk_{year:04d}_{month:02d}',
+                                   '_{day:03d}{hour:02d}{minute:02d}',
+                                   '{second:02d}_stuff_{version:02d}_',
+                                   '{revision:03d}.pysat_testing_file'))
+        start = pysat.datetime(2007, 12, 31)
+        stop = pysat.datetime(2008, 1, 10)
+        create_versioned_files(self.testInst, start, stop, freq='100min',
+                               use_doy=False, root_fname=self.root_fname)
+
+        self.testInst = \
+            pysat.Instrument(inst_module=pysat.instruments.pysat_testing,
+                             clean_level='clean',
+                             update_files=True,
+                             temporary_file_list=self.temporary_file_list)
+
+    def teardown(self):
+        """Runs after every method to clean up previous testing."""
+        remove_files(self.testInst)
+        del self.testInst
+        re_load(pysat.instruments.pysat_testing)
+        re_load(pysat.instruments)
+        # make sure everything about instrument state is restored
+        # restore original file list, no files
+        pysat.Instrument(inst_module=pysat.instruments.pysat_testing,
+                         clean_level='clean',
+                         update_files=True,
+                         temporary_file_list=self.temporary_file_list)
+        pysat.utils.set_data_dir(self.data_path, store=False)
