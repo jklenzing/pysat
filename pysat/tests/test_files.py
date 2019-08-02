@@ -666,7 +666,6 @@ class TestInstrumentWithFilesNoFileListStorage(TestInstrumentWithFiles):
         pysat.utils.set_data_dir(self.data_path, store=False)
 
 
-
 # create year doy file set with multiple versions
 def create_versioned_files(inst, start=None, stop=None, freq='1D',
                            use_doy=True, root_fname=None):
