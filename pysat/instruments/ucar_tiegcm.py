@@ -30,6 +30,9 @@ from __future__ import absolute_import
 import xarray as xr
 import pysat
 
+import logging
+logger = logging.getLogger(__name__)
+
 # the platform and name strings associated with this instrument
 # need to be defined at the top level
 # these attributes will be copied over to the Instrument object by pysat
@@ -47,7 +50,7 @@ sat_ids = {'': ['']}
 # good day to download test data for. Downloads aren't currently supported!
 # format is outer dictionary has sat_id as the key
 # each sat_id has a dictionary of test dates keyed by tag string
-test_dates = {'': {'': pysat.datetime(2019, 1, 1)}}
+_test_dates = {'': {'': pysat.datetime(2019, 1, 1)}}
 
 # specify using xarray (not using pandas)
 pandas_format = False
@@ -71,7 +74,7 @@ def init(self):
 
     """
 
-    print("Mission acknowledgements and data restrictions will be printed " +
+    logger.info("Mission acknowledgements and data restrictions will be printed " +
           "here when available.")
     return
 

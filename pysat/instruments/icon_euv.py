@@ -33,14 +33,16 @@ import pandas as pds
 import warnings
 
 import pysat
-from .methods import nasa_cdaweb as cdw
+from pysat.instruments.methods import nasa_cdaweb as cdw
 
+import logging
+logger = logging.getLogger(__name__)
 
 platform = 'icon'
 name = 'euv'
 tags = {'level_2': 'Level 2 public geophysical data'}
 sat_ids = {'': ['level_2']}
-test_dates = {'': {'level_2': pysat.datetime(2017, 5, 27)}}
+_test_dates = {'': {'level_2': pysat.datetime(2017, 5, 27)}}
 
 
 def init(self):
@@ -59,7 +61,7 @@ def init(self):
         modified in-place, as desired.
 
     """
-    print("Mission acknowledgements and data restrictions will be printed " +
+    logger.info("Mission acknowledgements and data restrictions will be printed " +
           "here when available.")
     pass
 

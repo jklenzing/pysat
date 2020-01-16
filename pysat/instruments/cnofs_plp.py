@@ -57,13 +57,13 @@ import functools
 import numpy as np
 
 import pysat
-from .methods import nasa_cdaweb as cdw
+from pysat.instruments.methods import nasa_cdaweb as cdw
 
 platform = 'cnofs'
 name = 'plp'
 tags = {'': ''}
 sat_ids = {'': ['']}
-test_dates = {'': {'': pysat.datetime(2009, 1, 1)}}
+_test_dates = {'': {'': pysat.datetime(2009, 1, 1)}}
 
 
 # support list files routine

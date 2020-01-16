@@ -264,6 +264,19 @@ class TestSwKpCombine():
 
         del combo_in
 
+    def test_combine_kp_no_data(self):
+        """Test combine_kp when no data is present for specified times"""
+
+        combo_in = {kk: self.combine['forecast_inst'] for kk in
+                    ['standard_inst', 'recent_inst', 'forecast_inst']}
+        combo_in['start'] = pysat.datetime(2014, 2, 19)
+        combo_in['stop'] = pysat.datetime(2014, 2, 24)
+        kp_inst = sw_meth.combine_kp(**combo_in)
+
+        assert kp_inst.data.isnull().all()["Kp"]
+
+        del combo_in, kp_inst
+
     def test_combine_kp_inst_time(self):
         """Test combine_kp when times are provided through the instruments"""
 
@@ -473,6 +486,19 @@ class TestSWF107Combine():
 
         assert_raises(ValueError, sw_meth.combine_f107,
                       self.combineInst[''], self.combineInst['forecast'])
+
+    def test_combine_f107_no_data(self):
+        """Test combine_f107 when no data is present for specified times"""
+
+        combo_in = {kk: self.combineInst['forecast'] for kk in
+                    ['standard_inst', 'forecast_inst']}
+        combo_in['start'] = pysat.datetime(2014, 2, 19)
+        combo_in['stop'] = pysat.datetime(2014, 2, 24)
+        f107_inst = sw_meth.combine_f107(**combo_in)
+
+        assert f107_inst.data.isnull().all()["f107"]
+
+        del combo_in, f107_inst
 
     def test_combine_f107_inst_time(self):
         """Test combine_f107 with times provided through datasets"""

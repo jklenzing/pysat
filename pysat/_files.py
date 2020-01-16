@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pds
 from pysat import data_dir as data_dir
 
+from pysat import logger
+
 
 class Files(object):
     """Maintains collection of files for instrument object.
@@ -79,7 +81,8 @@ class Files(object):
     """
 
     def __init__(self, sat, manual_org=False, directory_format=None,
-                 update_files=False, file_format=None, write_to_disk=True):
+                 update_files=False, file_format=None, write_to_disk=True,
+                 ignore_empty_files=False):
         """ Initialization for Files class object
 
         Parameters
@@ -108,6 +111,10 @@ class Files(object):
             If true, the list of Instrument files will be written to disk.
             Setting this to False prevents a rare condition when running
             multiple pysat processes.
+        ignore_empty_files : boolean
+            if True, the list of files found will be checked to
+            ensure the filesiizes are greater than zero. Empty files are
+            removed from the stored list of files.
         """
 
         # pysat.Instrument object
@@ -143,7 +150,11 @@ class Files(object):
                                                  platform=self._sat.platform,
                                                  tag=self._sat.tag,
                                                  sat_id=self._sat.sat_id)
-
+        # ensure we have a path for pysat data directory
+        if data_dir == '':
+            raise RuntimeError(" ".join(("pysat's data_dir is None. Set a",
+                                         "directory using",
+                                         "pysat.utils.set_data_dir.")))
         # make sure path always ends with directory seperator
         self.data_path = os.path.join(data_dir, self.sub_dir_path)
         if self.data_path[-2] == os.path.sep:
@@ -158,6 +169,9 @@ class Files(object):
             self._previous_file_list = pds.Series([], dtype='a')
             self._current_file_list = pds.Series([], dtype='a')
 
+        # store ignore_empty_files preference
+        self.ignore_empty_files = ignore_empty_files
+
         if self._sat.platform != '':
             # load stored file info
             info = self._load()
@@ -168,6 +182,26 @@ class Files(object):
             else:
                 # couldn't find stored info, load file list and then store
                 self.refresh()
+
+    def _filter_empty_files(self):
+        """Update the file list (files) with empty files ignored"""
+
+        keep_index = []
+        for i, fi in enumerate(self.files):
+            # create full path
+            fi_path = os.path.join(self.data_path, fi)
+            # ensure it exists
+            if os.path.exists(fi_path):
+                # check for size
+                if os.path.getsize(fi_path) > 0:
+                    # store if not empty
+                    keep_index.append(i)
+        # remove filenames as needed
+        dropped_num = len(self.files.index) - len(keep_index)
+        if dropped_num > 0:
+            print(' '.join(('Removing', str(dropped_num),
+                  'empty files from Instrument list.')))
+            self.files = self.files.iloc[keep_index]
 
     def _attach_files(self, files_info):
         """Attach results of instrument list_files routine to Instrument object
@@ -186,19 +220,30 @@ class Files(object):
         if not files_info.empty:
             unique_files = len(files_info.index.unique()) != len(files_info)
             if (not self._sat.multi_file_day and unique_files):
-                estr = 'WARNING! Duplicate datetimes in provided file '
+                estr = 'Duplicate datetimes in provided file '
                 estr = '{:s}information.\nKeeping one of each '.format(estr)
                 estr = '{:s}of the duplicates, dropping the rest.'.format(estr)
-                print(estr)
-                print(files_info.index[files_info.index.duplicated()].unique())
+                logger.warning(estr)
+                ind = files_info.index.duplicated()
+                logger.warning(files_info.index[ind].unique())
 
                 idx = np.unique(files_info.index, return_index=True)
                 files_info = files_info.iloc[idx[1]]
                 # raise ValueError('List of files must have unique datetimes.')
 
             self.files = files_info.sort_index()
-            self.start_date = self._sat._filter_datetime_input(files_info.index[0])
-            self.stop_date = self._sat._filter_datetime_input(files_info.index[-1])
+            # filter for empty files here (in addition to refresh)
+            if self.ignore_empty_files:
+                self._filter_empty_files()
+            # extract date information
+            if not self.files.empty:
+                self.start_date = \
+                    self._sat._filter_datetime_input(self.files.index[0])
+                self.stop_date = \
+                    self._sat._filter_datetime_input(self.files.index[-1])
+            else:
+                self.start_date = None
+                self.stop_date = None
         else:
             self.start_date = None
             self.stop_date = None
@@ -291,21 +336,24 @@ class Files(object):
                                        sat_id=self._sat.sat_id)
         output_str = " ".join(("pysat is searching for", output_str, "files."))
         output_str = " ".join(output_str.split())
-        print(output_str)
+        logger.info(output_str)
 
         info = self._sat._list_rtn(tag=self._sat.tag, sat_id=self._sat.sat_id,
                                    data_path=self.data_path,
                                    format_str=self.file_format)
-
+        info = self._remove_data_dir_path(info)
         if not info.empty:
-            print('Found {ll:d} of them.'.format(ll=len(info)))
+            if self.ignore_empty_files:
+                self._filter_empty_files()
+            logger.info('Found {ll:d} of them.'.format(ll=len(info)))
         else:
             estr = "Unable to find any files that match the supplied template."
             estr += " If you have the necessary files please check pysat "
             estr += "settings and file locations (e.g. pysat.pysat_dir)."
-            print(estr)
-        info = self._remove_data_dir_path(info)
+            logger.warning(estr)
+        # attach to object
         self._attach_files(info)
+        # store - to disk, if enabled
         self._store()
 
     def get_new(self):
@@ -371,7 +419,7 @@ class Files(object):
                 try:
                     # Assume key is integer (including list or slice)
                     out = self.files.iloc[key]
-                except:
+                except TypeError:
                     # Assume key is something else
                     out = self.files.loc[key]
             except IndexError as err:
@@ -398,7 +446,7 @@ class Files(object):
         else:
             try:
                 return self.files.iloc[key]
-            except:
+            except TypeError:
                 return self.files.loc[key]
 
     def get_file_array(self, start, end):
