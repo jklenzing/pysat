@@ -72,7 +72,7 @@ from __future__ import absolute_import
 import functools
 
 import pysat
-from .methods import nasa_cdaweb as cdw
+from pysat.instruments.methods import nasa_cdaweb as cdw
 
 platform = 'de2'
 name = 'rpa'

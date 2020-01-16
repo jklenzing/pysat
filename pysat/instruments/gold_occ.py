@@ -18,7 +18,7 @@ name : string
 sat_id : string
     ['cha']
 tag : string
-    ['', 'l2c']
+    ['']
 
 Note
 ----
@@ -42,7 +42,7 @@ import functools
 import pysat
 
 # CDAWeb methods prewritten for pysat
-from .methods import nasa_cdaweb as cdw
+from pysat.instruments.methods import nasa_cdaweb as cdw
 
 # the platform and name strings associated with this instrument
 # need to be defined at the top level
@@ -53,13 +53,11 @@ platform = 'gold'
 name = 'occ'
 
 # dictionary of data 'tags' and corresponding description
-tags = {'': 'Level 1 data',  # this is the default
-        'l2c': 'Level 2 data'}  # new defaultonce level 2 data is released
+tags = {'': 'Level 1c data'}  # this is the default
 
-sat_ids = {'cha': ['', 'l2c']}
+sat_ids = {'cha': ['']}
 
-test_dates = {'cha': {'': pysat.datetime(2019, 1, 1),
-                      'l2c': pysat.datetime(2019, 1, 1)}}
+_test_dates = {'cha': {'': pysat.datetime(2019, 1, 1)}}
 
 # specify using xarray (not using pandas)
 pandas_format = False
@@ -68,8 +66,7 @@ multi_file_day = True
 # specify file names
 fname = ''.join(('GOLD_L1C_CHA_DLR_{year:4d}_{doy:03d}_{hour:02d}_',
                  '{minute:02d}_v01_r01_c01.nc'))
-supported_tags = {'cha': {'': fname,
-                          'l2c': fname}}
+supported_tags = {'cha': {'': fname}}
 
 # use the CDAWeb methods list files routine
 list_files = functools.partial(cdw.list_files,
