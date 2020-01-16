@@ -64,8 +64,8 @@ pandas_format = False
 multi_file_day = True
 
 # specify file names
-fname = ''.join(('GOLD_L1C_CHA_NI1_{year:4d}_{day:03d}_{hour:02d}_',
-                 '{minute:02d}_v01_r01_c01.nc'))
+fname = ''.join(('GOLD_L1C_CHA_NI1_{year:4d}_{day:03d}_??_',
+                 '??_v03_r01_c01.nc'))
 supported_tags = {'cha': {'': fname}}
 
 # use the CDAWeb methods list files routine
@@ -92,8 +92,7 @@ download = functools.partial(cdw.download, supported_tags,
 
 # support listing files currently on CDAWeb
 list_remote_files = functools.partial(cdw.list_remote_files,
-                                      supported_tags=supported_tags,
-                                      multi_file_day=multi_file_day)
+                                      supported_tags=supported_tags)
 
 
 # code should be defined below as needed
