@@ -22,7 +22,8 @@ platform : string
 name : string
     'gps' for Radio Occultation profiles
 tag : string
-    Select profile type, one of {'ionprf', 'sonprf', 'wetprf', 'atmprf'}
+    Select profile type, or scintillation, one of:
+    {'ionprf', 'sonprf', 'wetprf', 'atmprf', 'scnlv1'}
 sat_id : string
     None supported
 
@@ -31,7 +32,8 @@ Note
 - 'ionprf: 'ionPrf' ionosphere profiles
 - 'sonprf': 'sonPrf' files
 - 'wetprf': 'wetPrf' files
-- 'atmPrf': 'atmPrf' files
+- 'atmprf': 'atmPrf' files
+- 'scnlv1': 'scnLv1' files
 
 Warnings
 --------
@@ -41,26 +43,29 @@ Warnings
 
 from __future__ import print_function
 from __future__ import absolute_import
-import glob
 import numpy as np
 import os
-import pandas as pds
 import sys
 
 import netCDF4
 import pysat
+
+import logging
+logger = logging.getLogger(__name__)
 
 platform = 'cosmic'
 name = 'gps'
 tags = {'ionprf': '',
         'sonprf': '',
         'wetprf': '',
-        'atmprf': ''}
-sat_ids = {'': ['ionprf', 'sonprf', 'wetprf', 'atmprf']}
-test_dates = {'': {'ionprf': pysat.datetime(2008, 1, 1),
-                   'sonprf': pysat.datetime(2008, 1, 1),
-                   'wetprf': pysat.datetime(2008, 1, 1),
-                   'atmprf': pysat.datetime(2008, 1, 1)}}
+        'atmprf': '',
+        'scnlv1': ''}
+sat_ids = {'': ['ionprf', 'sonprf', 'wetprf', 'atmprf', 'scnlv1']}
+_test_dates = {'': {'ionprf': pysat.datetime(2008, 1, 1),
+                    'sonprf': pysat.datetime(2008, 1, 1),
+                    'wetprf': pysat.datetime(2008, 1, 1),
+                    'atmprf': pysat.datetime(2008, 1, 1),
+                    'scnlv1': pysat.datetime(2008, 1, 1)}}
 
 
 def list_files(tag=None, sat_id=None, data_path=None, format_str=None):
@@ -87,44 +92,52 @@ def list_files(tag=None, sat_id=None, data_path=None, format_str=None):
 
     """
     estr = 'Building a list of COSMIC files, which can possibly take time. '
-    print('{:s}~1s per 100K files'.format(estr))
+    logger.info('{:s}~1s per 100K files'.format(estr))
     sys.stdout.flush()
 
-    # number of files may be large, written with this in mind
-    # only select file that are the cosmic data files and end with _nc
-    fnames = glob.glob(os.path.join(data_path, '*/*_nc'))
-    # need to get date and time from filename to generate index
-    num = len(fnames)
-    if num != 0:
-        print('Estimated time:', num * 1.E-5, 'seconds')
-        sys.stdout.flush()
-        # preallocate lists
-        year = [None] * num
-        days = [None] * num
-        hours = [None] * num
-        minutes = [None] * num
-        microseconds = [None] * num
-        for i, f in enumerate(fnames):
-            f2 = f.split('.')
-            year[i] = f2[-6]
-            days[i] = f2[-5]
-            hours[i] = f2[-4]
-            minutes[i] = f2[-3]
-            microseconds[i] = i
+    # Note that Files.from_os() could be used here except for the fact
+    # that there are multiple COSMIC files per given time
+    # here, we follow from_os() except a fictional microsecond
+    # is added to file times to help ensure there are no file collisions
 
-        year = np.array(year).astype(int)
-        days = np.array(days).astype(int)
-        uts = (np.array(hours).astype(int) * 3600.
-               + np.array(minutes).astype(int) * 60.)
-        # adding microseconds to ensure each time is unique, not allowed to
-        # pass 1.E-3 s
-        uts += np.mod(np.array(microseconds).astype(int) * 4, 8000) * 1.E-5
-        index = pysat.utils.time.create_datetime_index(year=year, day=days,
+    if format_str is None:
+        # COSMIC file format string
+        if tag == 'scnlv1':
+            format_str = ''.join(('????.???/??????_C???.{year:04d}',
+                                  '.{day:03d}.{hour:02d}.{minute:02d}.',
+                                  '????.?{second:02d}.??_????.????_nc'))
+        else:
+            format_str = ''.join(('????.???/??????_C???.{year:04d}',
+                                  '.{day:03d}.{hour:02d}.{minute:02d}.',
+                                  '?{second:02d}_????.????_nc'))
+
+    # process format string to get string to search for
+    search_dict = pysat._files.construct_searchstring_from_format(format_str,
+                                                                  wildcard=False)
+    search_str = search_dict['search_string']
+    # perform local file search
+    files = pysat._files.search_local_system_formatted_filename(data_path,
+                                                                search_str)
+    # we have a list of files, now we need to extract the information
+    # pull of data from the areas identified by format_str
+    stored = pysat._files.parse_fixed_width_filenames(files, format_str)
+
+    if len(stored['year']) > 0:
+        year = np.array(stored['year'])
+        day = np.array(stored['day'])
+        hour = np.array(stored['hour'])
+        minute = np.array(stored['minute'])
+        second = np.array(stored['second'])
+        uts = hour*3600. + minute*60. + second
+        # adding microseconds to ensure each time is unique
+        uts += np.mod(np.arange(len(year)).astype(int), 8000) * 1.E-5
+        index = pysat.utils.time.create_datetime_index(year=year, day=day,
                                                        uts=uts)
-        file_list = pysat.Series(fnames, index=index)
+        file_list = pysat.Series(stored['files'], index=index)
         return file_list
+
     else:
-        print('Found no files, check your path or download them.')
+        logger.info('Found no files, check your path or download them.')
         return pysat.Series(None)
 
 
@@ -176,18 +189,34 @@ def load(fnames, tag=None, sat_id=None):
                     meta[d] = {'units': '', 'long_name': d}
                 keys = data.variables.keys()
                 for key in keys:
-                    profile_meta[key] = {'units': data.variables[key].units,
-                                         'long_name':
-                                         data.variables[key].long_name}
+                    if 'units' in data.variables[key].ncattrs():
+                        profile_meta[key] = {'units': data.variables[key].units,
+                                             'long_name':
+                                             data.variables[key].long_name}
                 repeat = False
             except RuntimeError:
                 # file was empty, try the next one by incrementing ind
                 ind += 1
+
         meta['profiles'] = profile_meta
         return output, meta
     else:
         # no data
         return pysat.DataFrame(None), pysat.Meta()
+
+
+def _process_lengths(lengths):
+    """Prep lengths for parsing.
+
+    Internal func used by load_files.
+    """
+
+    lengths = lengths.tolist()
+    lengths.insert(0, 0)
+    lengths = np.array(lengths)
+    lengths2 = lengths.copy()
+    lengths[-1] += 1
+    return lengths, lengths2
 
 
 # seperate routine for doing actual loading. This was broken off from main load
@@ -220,26 +249,39 @@ def load_files(files, tag=None, sat_id=None, altitude_bin=None):
     """
     output = [None] * len(files)
     drop_idx = []
-    for (i, file) in enumerate(files):
+    main_dict = {}
+    main_dict_len = {}
+
+    safe_keys = []
+    for (i, fname) in enumerate(files):
         try:
-            data = netCDF4.Dataset(file)
+            data = netCDF4.Dataset(fname)
             # build up dictionary will all ncattrs
             new = {}
             # get list of file attributes
             ncattrsList = data.ncattrs()
+            # these include information about where the profile observed
             for d in ncattrsList:
                 new[d] = data.getncattr(d)
-            # load all of the variables in the netCDF
-            loadedVars = {}
-            keys = data.variables.keys()
-            for key in keys:
-                if data.variables[key][:].dtype.byteorder != '=':
-                    loadedVars[key] = \
-                        data.variables[key][:].byteswap().newbyteorder()
-                else:
-                    loadedVars[key] = data.variables[key][:]
 
-            new['profiles'] = pysat.DataFrame(loadedVars)
+            if i == 0:
+                keys = data.variables.keys()
+                for key in keys:
+                    safe_keys.append(key)
+                    main_dict[key] = []
+                    main_dict_len[key] = []
+
+            # load all of the variables in the netCDF
+            for key in safe_keys:
+                # grab data
+                t_list = data.variables[key][:]
+                # reverse byte order if needed
+                if t_list.dtype.byteorder != '=':
+                    main_dict[key].append(t_list.byteswap().newbyteorder())
+                else:
+                    main_dict[key].append(t_list)
+                # store lengths
+                main_dict_len[key].append(len(main_dict[key][-1]))
 
             output[i] = new
             data.close()
@@ -253,6 +295,72 @@ def load_files(files, tag=None, sat_id=None, altitude_bin=None):
     drop_idx.reverse()
     for i in drop_idx:
         del output[i]
+
+    # combine different sub lists in main_dict into one
+    for key in safe_keys:
+        main_dict[key] = np.hstack(main_dict[key])
+        main_dict_len[key] = np.cumsum(main_dict_len[key])
+
+    if tag == 'atmprf':
+        # this file has three groups of variable lengths
+        # each goes into its own DataFrame
+        # two are processed here, last is processed like other
+        # file types
+        # see code just after this if block for more
+        # general explanation on lines just below
+        p_keys = ['OL_vec2', 'OL_vec1', 'OL_vec3', 'OL_vec4']
+        p_dict = {}
+        # get indices needed to parse data
+        plengths = main_dict_len['OL_vec1']
+        max_p_length = np.max(plengths)
+        plengths, plengths2 = _process_lengths(plengths)
+        # collect data
+        for key in p_keys:
+            p_dict[key] = main_dict.pop(key)
+            _ = main_dict_len.pop(key)
+        psub_frame = pysat.DataFrame(p_dict)
+
+        # change in variables in this fiile type
+        # depending upon the processing applied at UCAR
+        if 'ies' in main_dict.keys():
+            q_keys = ['OL_ipar', 'OL_par', 'ies', 'hes', 'wes']
+        else:
+            q_keys = ['OL_ipar', 'OL_par']
+        q_dict = {}
+        # get indices needed to parse data
+        qlengths = main_dict_len['OL_par']
+        max_q_length = np.max(qlengths)
+        qlengths, qlengths2 = _process_lengths(qlengths)
+        # collect data
+        for key in q_keys:
+            q_dict[key] = main_dict.pop(key)
+            _ = main_dict_len.pop(key)
+        qsub_frame = pysat.DataFrame(q_dict)
+
+        max_length = np.max([max_p_length, max_q_length])
+        length_arr = np.arange(max_length)
+        # small sub DataFrames
+        for i in np.arange(len(output)):
+            output[i]['OL_vecs'] = psub_frame.iloc[plengths[i]:plengths[i+1], :]
+            output[i]['OL_vecs'].index = length_arr[:plengths2[i+1]-plengths2[i]]
+            output[i]['OL_pars'] = qsub_frame.iloc[qlengths[i]:qlengths[i+1], :]
+            output[i]['OL_pars'].index = length_arr[:qlengths2[i+1]-qlengths2[i]]
+
+    # create a single data frame with all bits, then
+    # break into smaller frames using views
+    main_frame = pysat.DataFrame(main_dict)
+    # get indices needed to parse data
+    lengths = main_dict_len[list(main_dict.keys())[0]]
+    # get largest length and create numpy array with it
+    # used to speed up reindexing below
+    max_length = np.max(lengths)
+    length_arr = np.arange(max_length)
+    # process lengths for ease of parsing
+    lengths, lengths2 = _process_lengths(lengths)
+    # break main profile data into each individual profile
+    for i in np.arange(len(output)):
+        output[i]['profiles'] = main_frame.iloc[lengths[i]:lengths[i+1], :]
+        output[i]['profiles'].index = length_arr[:lengths2[i+1]-lengths2[i]]
 
     if tag == 'ionprf':
         if altitude_bin is not None:
@@ -286,7 +394,6 @@ def download(date_array, tag, sat_id, data_path=None,
     """
     import requests
     from requests.auth import HTTPBasicAuth
-    import os
     import tarfile
     import shutil
 
@@ -296,8 +403,10 @@ def download(date_array, tag, sat_id, data_path=None,
         sub_dir = 'sonPrf'
     elif tag == 'wetprf':
         sub_dir = 'wetPrf'
-    elif tag == 'atmPrf':
+    elif tag == 'atmprf':
         sub_dir = 'atmPrf'
+    elif tag == 'scnlv1':
+        sub_dir = 'scnLv1'
     else:
         raise ValueError('Unknown cosmic_gps tag')
 
@@ -305,7 +414,7 @@ def download(date_array, tag, sat_id, data_path=None,
         raise ValueError('CDAAC user account information must be provided.')
 
     for date in date_array:
-        print('Downloading COSMIC data for ' + date.strftime('%D'))
+        logger.info('Downloading COSMIC data for ' + date.strftime('%D'))
         sys.stdout.flush()
         yr, doy = pysat.utils.time.getyrdoy(date)
         yrdoystr = '{year:04d}.{doy:03d}'.format(year=yr, doy=doy)
@@ -319,7 +428,7 @@ def download(date_array, tag, sat_id, data_path=None,
             req = requests.get(dwnld, auth=HTTPBasicAuth(user, password))
             req.raise_for_status()
         except requests.exceptions.HTTPError:
-        # if repsonse is negative, try post-processed data
+            # if repsonse is negative, try post-processed data
             try:
                 dwnld = ''.join(("https://cdaac-www.cosmic.ucar.edu/cdaac/",
                                  "rest/tarservice/data/cosmic/"))
@@ -329,26 +438,34 @@ def download(date_array, tag, sat_id, data_path=None,
                 req = requests.get(dwnld, auth=HTTPBasicAuth(user, password))
                 req.raise_for_status()
             except requests.exceptions.HTTPError as err:
-                estr = ''.join(str(err), '\n', 'Data not found')
-                print(estr)
+                estr = ''.join((str(err), '\n', 'Data not found'))
+                logger.info(estr)
+        # Copy request info to tarball
+        # If data does not exist, will copy info not readable as tar
         fname = os.path.join(data_path,
                              'cosmic_' + sub_dir + '_' + yrdoystr + '.tar')
         with open(fname, "wb") as local_file:
             local_file.write(req.content)
             local_file.close()
-        # uncompress files and remove tarball
-        tar = tarfile.open(fname)
-        tar.extractall(path=data_path)
-        tar.close()
+        try:
+            # uncompress files and remove tarball
+            tar = tarfile.open(fname)
+            tar.extractall(path=data_path)
+            tar.close()
+            # move files
+            source_dir = os.path.join(top_dir, sub_dir, yrdoystr)
+            destination_dir = os.path.join(data_path, yrdoystr)
+            if os.path.exists(destination_dir):
+                shutil.rmtree(destination_dir)
+            shutil.move(source_dir, destination_dir)
+            # Get rid of empty directories from tar process
+            shutil.rmtree(top_dir)
+        except tarfile.ReadError:
+            # If file cannot be read as a tarfile, then data does not exist
+            # skip this day since no data to move
+            pass
+        # tar file must be removed (even if download fails)
         os.remove(fname)
-        # move files
-        source_dir = os.path.join(top_dir, sub_dir, yrdoystr)
-        destination_dir = os.path.join(data_path, yrdoystr)
-        if os.path.exists(destination_dir):
-            shutil.rmtree(destination_dir)
-        shutil.move(source_dir, destination_dir)
-        # Get rid of empty directories from tar process
-        shutil.rmtree(top_dir)
 
     return
 
@@ -413,7 +530,7 @@ def clean(inst):
         # filter out any measurements where things have been set to NaN
         inst.data = inst.data[inst.data.edmaxalt.notnull()]
 
-    elif inst.tag == 'scnlvl1':
+    elif inst.tag == 'scnlv1':
         # scintillation files
         if inst.clean_level == 'clean':
             # try and make sure all data is good

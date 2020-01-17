@@ -41,14 +41,14 @@ from __future__ import absolute_import
 import functools
 
 import pysat
-from .methods import nasa_cdaweb as cdw
+from pysat.instruments.methods import nasa_cdaweb as cdw
 
 # include basic instrument info
 platform = 'timed'
 name = 'see'
 tags = {'': ''}
 sat_ids = {'': ['']}
-test_dates = {'': {'': pysat.datetime(2009, 1, 1)}}
+_test_dates = {'': {'': pysat.datetime(2009, 1, 1)}}
 
 
 # support list files routine

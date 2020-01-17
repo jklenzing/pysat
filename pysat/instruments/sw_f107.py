@@ -43,13 +43,15 @@ is not appropriate for 'forecast' data.
 """
 
 import os
-import functools
 import warnings
 
 import numpy as np
 import pandas as pds
 
 import pysat
+
+import logging
+logger = logging.getLogger(__name__)
 
 platform = 'sw'
 name = 'f107'
@@ -67,12 +69,12 @@ now = pysat.datetime.now()
 today = pysat.datetime(now.year, now.month, now.day)
 tomorrow = today + pds.DateOffset(days=1)
 # set test dates
-test_dates = {'': {'': pysat.datetime(2009, 1, 1),
-                   'all': pysat.datetime(2009, 1, 1),
-                   'prelim': pysat.datetime(2009, 1, 1),
-                   'daily': tomorrow,
-                   'forecast': tomorrow,
-                   '45day': tomorrow}}
+_test_dates = {'': {'': pysat.datetime(2009, 1, 1),
+                    'all': pysat.datetime(2009, 1, 1),
+                    'prelim': pysat.datetime(2009, 1, 1),
+                    'daily': tomorrow,
+                    'forecast': tomorrow,
+                    '45day': tomorrow}}
 
 
 def load(fnames, tag=None, sat_id=None):
@@ -383,7 +385,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
             if data.empty:
                 warnings.warn("no data for {:}".format(date), UserWarning)
             else:
-                times = [pysat.datetime.strptime(time, '%Y %m %d')
+                times = [pysat.datetime.strptime(time, '%Y%m%d')
                          for time in data.pop('time')]
                 data.index = times
                 # replace fill with NaNs
@@ -411,8 +413,14 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
         # process
         raw_dict = json.loads(r.text)['noaa_radio_flux']
         data = pds.DataFrame.from_dict(raw_dict['samples'])
-        times = [pysat.datetime.strptime(time, '%Y %m %d')
-                 for time in data.pop('time')]
+        try:
+            # This is the new data format
+            times = [pysat.datetime.strptime(time, '%Y%m%d')
+                     for time in data.pop('time')]
+        except ValueError:
+            # Accepts old file formats
+            times = [pysat.datetime.strptime(time, '%Y %m %d')
+                     for time in data.pop('time')]
         data.index = times
         # replace fill with NaNs
         idx, = np.where(data['f107'] == -99999.0)
@@ -432,8 +440,8 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
 
         bad_fname = list()
 
-        # Get the local files, to ensure that the version 1 files are downloaded
-        # again if more data has been added
+        # Get the local files, to ensure that the version 1 files are
+        # downloaded again if more data has been added
         local_files = list_files(tag, sat_id, data_path)
 
         # To avoid downloading multiple files, cycle dates based on file length
@@ -441,7 +449,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
         while date <= date_array[-1]:
             # The file name changes, depending on how recent the requested
             # data is
-            qnum = (date.month-1) // 3 + 1 # Integer floor division
+            qnum = (date.month-1) // 3 + 1  # Integer floor division
             qmonth = (qnum-1) * 3 + 1
             quar = 'Q{:d}_'.format(qnum)
             fnames = ['{:04d}{:s}DSD.txt'.format(date.year, ss)
@@ -492,7 +500,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
                         ftp.retrbinary('RETR ' + fname,
                                        open(saved_fname, 'wb').write)
                         downloaded = True
-                        print('Downloaded file for ' + date.strftime('%x'))
+                        logger.info('Downloaded file for ' + date.strftime('%x'))
 
                     except ftplib.error_perm as exception:
                         # Could not fetch, so cannot rewrite
@@ -516,7 +524,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
                     break
 
             if not downloaded:
-                print('File not available for {:}'.format(date.strftime('%x')))
+                logger.info('File not available for {:}'.format(date.strftime('%x')))
             elif rewritten:
                 with open(saved_fname, 'r') as fprelim:
                     lines = fprelim.read()
@@ -532,7 +540,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
 
     elif tag == 'daily':
         import requests
-        print('This routine can only download the latest 30 day file')
+        logger.info('This routine can only download the latest 30 day file')
 
         # download webpage
         furl = 'https://services.swpc.noaa.gov/text/daily-solar-indices.txt'
@@ -545,7 +553,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
 
     elif tag == 'forecast':
         import requests
-        print('This routine can only download the current forecast, not ' +
+        logger.info('This routine can only download the current forecast, not ' +
               'archived forecasts')
         # download webpage
         furl = 'https://services.swpc.noaa.gov/text/' + \
@@ -575,7 +583,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
 
     elif tag == '45day':
         import requests
-        print('This routine can only download the current forecast, not ' +
+        logger.info('This routine can only download the current forecast, not ' +
               'archived forecasts')
         # download webpage
         furl = 'https://services.swpc.noaa.gov/text/45-day-ap-forecast.txt'

@@ -28,13 +28,13 @@ import numpy as np
 
 import pysat
 
-from .methods import nasa_cdaweb as cdw
+from pysat.instruments.methods import nasa_cdaweb as cdw
 
 platform = 'iss'
 name = 'fpmu'
 tags = {'': ''}
 sat_ids = {'': ['']}
-test_dates = {'': {'': pysat.datetime(2017, 10, 1)}}
+_test_dates = {'': {'': pysat.datetime(2017, 10, 1)}}
 
 # support list files routine
 # use the default CDAWeb method

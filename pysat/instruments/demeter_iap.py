@@ -40,14 +40,17 @@ import pandas as pds
 import numpy as np
 
 import pysat
-from .methods import demeter
+from pysat.instruments.methods import demeter
+
+import logging
+logger = logging.getLogger(__name__)
 
 platform = 'demeter'
 name = 'iap'
 tags = {'survey': 'Survey mode',
         'burst': 'Burst mode'}
 sat_ids = {'': list(tags.keys())}
-test_dates = {'': {'survey': pysat.datetime(2010, 1, 1)}}
+_test_dates = {'': {'survey': pysat.datetime(2010, 1, 1)}}
 
 apid = {'survey': 1140, 'burst': 1139}
 
@@ -62,7 +65,7 @@ list_remote_files = demeter.list_remote_files
 
 
 def init(self):
-    print(' '.join(("When using this data please include a version of the,"
+    logger.info(' '.join(("When using this data please include a version of the,"
                     "acknowledgement outlined in the metadata attribute",
                     "'info.acknowledgements'.  We recommend that data users",
                     "contact the experiment PI early in their study. ",
@@ -108,8 +111,8 @@ def list_files(tag="survey", sat_id='', data_path=None, format_str=None,
         else:
             time_str = '????????_??????_{year:4d}{month:02d}{day:02d}_??????'
 
-        format_str = ''.join(('DMT_N1_{:d}_??????_'.format(apid[tag]),
-                              time_str, '.DAT'))
+        format_str = ''.join(['DMT_N1_{:d}_??????_'.format(apid[tag]),
+                              time_str, '.DAT'])
 
     return pysat.Files.from_os(data_path=data_path, format_str=format_str)
 
@@ -138,7 +141,7 @@ def load(fnames, tag='survey', sat_id=''):
     """
 
     if len(fnames) == 0:
-        print('need list of filenames')
+        logger.info('need list of filenames')
         return pysat.DataFrame(None), None
 
     # Load the desired data and cast as a DataFrame
@@ -190,7 +193,7 @@ def load_experiment_data(fhandle):
     data_units = dict()
     # Load the house-keeping and status flags
     for i in range(32):
-        data.append(int(codecs.encode(chunk[10+i], 'hex'), 16))
+        data.append(int(codecs.encode(chunk[10+i:11+i], 'hex'), 16))
         data_names.append('status_flag_{:02d}'.format(i))
         data_units[data_names[-1]] = "N/A"
 
@@ -248,7 +251,7 @@ def clean(inst):
     """
 
     if inst.clean_level in ['dusty', 'dirty']:
-        print(''.join("'dusty' and 'dirty' levels not supported, ",
+        logger.info(''.join("'dusty' and 'dirty' levels not supported, ",
                       "defaulting to 'clean'"))
         inst.clean_level = 'clean'
 
@@ -268,10 +271,10 @@ def clean(inst):
                     nions[i] += 1
 
                 # Need Level 0 files to select data with J >= 1 nA
-                print("WARNING: Level 0 files needed to finish cleaning data")
+                logger.warning("Level 0 files needed to finish cleaning data")
 
-                # Select times with at least two ion species
-                idx, = np.where(nions > 1)
+        # Select times with at least two ion species
+        idx, = np.where(nions > 1)
     else:
         idx = slice(0, inst.index.shape[0])
 
@@ -307,7 +310,7 @@ def add_drift_sat_coord(inst):
     # Because the ADV instrument is not fully aligned with the axis of the
     # satellite, reposition into satellite coordinates
     # (IS THIS ALREADY CORRECTED IN FILES?)
-    print("WARNING the ADV instrument is not fully aligned with the axis of "
+    logger.warning("the ADV instrument is not fully aligned with the axis of "
           + "the satellite and this may not have been corrected")
 
     return
