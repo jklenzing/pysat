@@ -166,6 +166,9 @@ def load(fnames, tag=None, sat_id=None):
     # Epoch is Jan 1, 2000, 11:58:55.816 UTC
     origin = pds.Timestamp(2000, 1, 1, 11, 58, 56)
     data['time'] = pds.to_datetime(data['time_et'], unit='s', origin=origin)
+    # Add the East-West and North-South grids as coordinates
+    data = data.set_index(indexes={'ew': 'grid_ew',
+                                   'ns': 'grid_ns'})
 
     mdata = pysat.Meta(None)
 
