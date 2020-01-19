@@ -39,7 +39,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import functools
+import netCDF4
+import numpy as np
 import xarray as xr
+import pandas as pds
 import pysat
 
 # CDAWeb methods prewritten for pysat
@@ -73,17 +76,6 @@ supported_tags = {'cha': {'': fname}}
 list_files = functools.partial(cdw.list_files,
                                supported_tags=supported_tags)
 
-#
-# support download routine
-#
-# to use the default CDAWeb method
-# we need to provide additional information
-# directory location on CDAWeb ftp server
-# formatting template for filenames on CDAWeb
-# formatting template for files saved to the local disk
-# a dictionary needs to be created for each sat_id and tag
-# combination along with the file format template
-# outer dict keyed by sat_id, inner dict keyed by tag
 basic_tag = {'dir': '/pub/data/gold/level1c',
              'remote_fname': '{year:4d}/{day:03d}/' + fname,
              'local_fname': fname}
@@ -115,6 +107,10 @@ def default(self):
 
 
     """
+
+    # ind = np.abs(self.data.wavelength[0, 20, 20, :] - 135) <= 2
+    # x = self.data.wavelength[ind]
+    # self.data['rad1356'] = np.sum(self.data.radiance[:, :, :, ind], axis=4)
 
     return
 
@@ -160,17 +156,20 @@ def load(fnames, tag=None, sat_id=None):
 
     """
 
-    return pysat.utils.load_netcdf4(fnames, epoch_name='Epoch',
-                                    units_label='Units',
-                                    name_label='Long_Name',
-                                    notes_label='Var_Notes',
-                                    desc_label='CatDesc',
-                                    plot_label='FieldNam',
-                                    axis_label='LablAxis',
-                                    scale_label='ScaleTyp',
-                                    min_label='ValidMin',
-                                    max_label='ValidMax',
-                                    fill_label='FillVal')
+    # NOTE: only loads first file for now
+    data = xr.Dataset()
+    with netCDF4.Dataset(fnames[0]) as ds:
+        for key in ds.variables.keys():
+            dims = ds.variables[key].dimensions
+            data[key.lower()] = (dims, ds.variables[key][:].data)
+
+    # Epoch is Jan 1, 2000, 11:58:55.816 UTC
+    origin = pds.Timestamp(2000, 1, 1, 11, 58, 56)
+    data['time'] = pds.to_datetime(data['time_et'], unit='s', origin=origin)
+
+    mdata = pysat.Meta(None)
+
+    return data, mdata
 
 
 # code should be defined below as needed
