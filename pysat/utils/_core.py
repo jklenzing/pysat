@@ -13,7 +13,11 @@ def new_terrible_function(path=None):
     if path is None:
         path = 37
         
-     x = path + 3
+     x = path+3
+    try:
+        x=x-2
+    except:
+        pass
 
     return path
         
