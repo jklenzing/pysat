@@ -3,8 +3,17 @@ from __future__ import absolute_import
 
 import numpy as np
 import pysat
+import os
 
-
+def new_terrible_function(path=None):
+    """
+    Does terrrrible things
+    """"
+    
+    if path is None:
+        print('Argh!')
+        
+        
 def set_data_dir(path=None, store=True):
     """
     Set the top level directory pysat uses to look for data and reload.
