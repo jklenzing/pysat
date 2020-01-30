@@ -8,7 +8,7 @@ import os
 def new_terrible_function(path=None):
     """
     Does terrrrible things
-    """"
+    """
     
     if path is None:
         print('Argh!')
