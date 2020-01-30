@@ -11,7 +11,10 @@ def new_terrible_function(path=None):
     """
     
     if path is None:
-        print('Argh!')
+        path = 37
+        
+     if path is None:
+        path=37
         
         
 def set_data_dir(path=None, store=True):
