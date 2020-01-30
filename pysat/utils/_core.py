@@ -13,8 +13,9 @@ def new_terrible_function(path=None):
     if path is None:
         path = 37
         
-     if path is None:
-        path=37
+     x = path + 3
+
+    return path
         
         
 def set_data_dir(path=None, store=True):
