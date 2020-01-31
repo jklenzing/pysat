@@ -12,6 +12,9 @@ import pandas as pds
 
 import pysat
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def list_files(tag=None, sat_id=None, data_path=None, format_str=None,
                supported_tags=None, fake_daily_files_from_monthly=False,
@@ -269,26 +272,26 @@ def download(supported_tags, date_array, tag, sat_id,
         # perform download
         if not multi_file_day:
             try:
-                print(' '.join(('Attempting to download file for',
-                                date.strftime('%d %B %Y'))))
+                logger.info(' '.join(('Attempting to download file for',
+                                      date.strftime('%d %B %Y'))))
                 sys.stdout.flush()
                 remote_path = '/'.join((remote_url.strip('/'),
                                         formatted_remote_fname))
                 req = requests.get(remote_path)
                 if req.status_code != 404:
                     open(saved_local_fname, 'wb').write(req.content)
-                    print('Finished.')
+                    logger.info('Finished.')
                 else:
-                    print(' '.join(('File not available for',
-                                    date.strftime('%d %B %Y'))))
+                    logger.info(' '.join(('File not available for',
+                                          date.strftime('%d %B %Y'))))
             except requests.exceptions.RequestException as exception:
-                print(' '.join((exception, '- File not available for',
-                                date.strftime('%d %B %Y'))))
+                logger.info(' '.join((exception, '- File not available for',
+                                      date.strftime('%d %B %Y'))))
 
         else:
             try:
-                print(' '.join(('Attempting to download files for',
-                                date.strftime('%d %B %Y'))))
+                logger.info(' '.join(('Attempting to download files for',
+                                      date.strftime('%d %B %Y'))))
                 sys.stdout.flush()
                 remote_files = list_remote_files(tag=tag, sat_id=sat_id,
                                                  remote_site=remote_site,
@@ -311,12 +314,12 @@ def download(supported_tags, date_array, tag, sat_id,
                         open(saved_local_fname, 'wb').write(req.content)
                         i += 1
                     else:
-                        print(' '.join(('File not available for',
-                                        date.strftime('%d %B %Y'))))
-                print('Downloaded {i:} of {n:} files.'.format(i=i, n=n))
+                        logger.info(' '.join(('File not available for',
+                                              date.strftime('%d %B %Y'))))
+                logger.info('Downloaded {i:} of {n:} files.'.format(i=i, n=n))
             except requests.exceptions.RequestException as exception:
-                print(' '.join((exception, '- Files not available for',
-                                date.strftime('%d %B %Y'))))
+                logger.info(' '.join((exception, '- Files not available for',
+                                      date.strftime('%d %B %Y'))))
 
 
 def list_remote_files(tag, sat_id,
@@ -337,7 +340,7 @@ def list_remote_files(tag, sat_id,
         Denotes type of file to load.  Accepted types are <tag strings>.
         (default=None)
     sat_id : (string or NoneType)
-        Specifies the satellite ID for a constellation.  Not used.
+        Specifies the satellite ID for a constellation.
         (default=None)
     remote_site : (string or NoneType)
         Remote site to download data from
@@ -465,7 +468,7 @@ def list_remote_files(tag, sat_id,
     fmt_idx.append(format_str.find('*'))
 
     # Not all characters may exist in a filename.  Remove those that don't.
-    fmt_idx.remove(-1)
+    fmt_idx = [elem for elem in fmt_idx if elem != -1]
 
     # If preamble exists, add to targets
     if fmt_idx:
@@ -485,16 +488,16 @@ def list_remote_files(tag, sat_id,
     else:
         n_loops = n_layers + 1
     full_files = []
+
     for level in range(n_loops):
         for directory in remote_dirs[level]:
             temp_url = '/'.join((remote_url.strip('/'), directory))
             soup = BeautifulSoup(requests.get(temp_url).content, "lxml")
             links = soup.find_all('a', href=True)
             for link in links:
-                if level < n_layers:
-                    # If there is room to go down, look for directories
-                    if link['href'].count('/') == 1:
-                        remote_dirs[level+1].append(link['href'])
+                # If there is room to go down, look for directories
+                if link['href'].count('/') == 1:
+                    remote_dirs[level+1].append(link['href'])
                 else:
                     # If at the endpoint, add matching files to list
                     add_file = True
@@ -522,5 +525,6 @@ def list_remote_files(tag, sat_id,
             mask = mask & (stored_list.index.month == month)
             if day is not None:
                 mask = mask & (stored_list.index.day == day)
+        stored_list = stored_list[mask]
 
-    return stored_list[mask]
+    return stored_list

@@ -50,6 +50,9 @@ import pandas as pds
 
 import pysat
 
+import logging
+logger = logging.getLogger(__name__)
+
 platform = 'sw'
 name = 'f107'
 tags = {'': 'Daily LASP value of F10.7',
@@ -67,11 +70,11 @@ today = pysat.datetime(now.year, now.month, now.day)
 tomorrow = today + pds.DateOffset(days=1)
 # set test dates
 _test_dates = {'': {'': pysat.datetime(2009, 1, 1),
-                   'all': pysat.datetime(2009, 1, 1),
-                   'prelim': pysat.datetime(2009, 1, 1),
-                   'daily': tomorrow,
-                   'forecast': tomorrow,
-                   '45day': tomorrow}}
+                    'all': pysat.datetime(2009, 1, 1),
+                    'prelim': pysat.datetime(2009, 1, 1),
+                    'daily': tomorrow,
+                    'forecast': tomorrow,
+                    '45day': tomorrow}}
 
 
 def load(fnames, tag=None, sat_id=None):
@@ -497,7 +500,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
                         ftp.retrbinary('RETR ' + fname,
                                        open(saved_fname, 'wb').write)
                         downloaded = True
-                        print('Downloaded file for ' + date.strftime('%x'))
+                        logger.info('Downloaded file for ' + date.strftime('%x'))
 
                     except ftplib.error_perm as exception:
                         # Could not fetch, so cannot rewrite
@@ -521,7 +524,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
                     break
 
             if not downloaded:
-                print('File not available for {:}'.format(date.strftime('%x')))
+                logger.info('File not available for {:}'.format(date.strftime('%x')))
             elif rewritten:
                 with open(saved_fname, 'r') as fprelim:
                     lines = fprelim.read()
@@ -537,7 +540,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
 
     elif tag == 'daily':
         import requests
-        print('This routine can only download the latest 30 day file')
+        logger.info('This routine can only download the latest 30 day file')
 
         # download webpage
         furl = 'https://services.swpc.noaa.gov/text/daily-solar-indices.txt'
@@ -550,7 +553,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
 
     elif tag == 'forecast':
         import requests
-        print('This routine can only download the current forecast, not ' +
+        logger.info('This routine can only download the current forecast, not ' +
               'archived forecasts')
         # download webpage
         furl = 'https://services.swpc.noaa.gov/text/' + \
@@ -580,7 +583,7 @@ def download(date_array, tag, sat_id, data_path, user=None, password=None):
 
     elif tag == '45day':
         import requests
-        print('This routine can only download the current forecast, not ' +
+        logger.info('This routine can only download the current forecast, not ' +
               'archived forecasts')
         # download webpage
         furl = 'https://services.swpc.noaa.gov/text/45-day-ap-forecast.txt'
