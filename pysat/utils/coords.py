@@ -9,7 +9,8 @@ import pysat
 import pandas as pds
 import numpy as np
 
-def add_fake_data(samples, high = None):
+
+def add_fake_data(samples, high=None):
     if high is None:
         x = 5
         else:
