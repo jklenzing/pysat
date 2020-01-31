@@ -5,10 +5,16 @@ pysat.coords - coordinate transformations for pysat
 pysat.coords contains a number of coordinate-transformation
 functions used throughout the pysat package.
 """
-
-import numpy as np
+import pysat
 import pandas as pds
+import numpy as np
 
+def add_fake_data(samples, high = None):
+    if high is None:
+        x = 5
+        else:
+            x = 3
+     return x*samples
 
 def adjust_cyclic_data(samples, high=2.0*np.pi, low=0.0):
     """Adjust cyclic values such as longitude to a different scale
